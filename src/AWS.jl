@@ -5,6 +5,7 @@ using Base64
 using Dates
 using Downloads: Downloads, Downloader, Curl
 using HTTP
+using JSON: JSON
 using MbedTLS
 using Mocking
 using OrderedCollections: LittleDict, OrderedDict
@@ -46,7 +47,7 @@ include("deprecated.jl")
 using ..AWSExceptions
 using ..AWSExceptions: AWSException
 
-const user_agent = Ref{String}("AWS.jl/$(pkgversion(@__MODULE__()))")
+const user_agent = Ref{String}()
 const aws_config = Ref{AbstractAWSConfig}()
 
 """
@@ -401,7 +402,7 @@ function (service::JSONService)(
         use_response_type=feature_set.use_response_type,
         resource=POST_RESOURCE,
         request_method="POST",
-        content=json(args),
+        content=JSON.json(args),
         url=generate_service_url(aws_config, service.endpoint_prefix, POST_RESOURCE),
     )
 
@@ -458,7 +459,7 @@ function (service::RestJSONService)(
     end
 
     request.headers["Content-Type"] = "application/json"
-    request.content = json(args)
+    request.content = JSON.json(args)
 
     return submit_request(aws_config, request; return_headers=return_headers)
 end
@@ -469,6 +470,10 @@ function (service::ServiceWrapper)(args...; feature_set=nothing, kwargs...)
 end
 
 function __init__()
+    pkg_module = @__MODULE__()
+    pkg_version = pkgversion(pkg_module)
+    user_agent[] = "$(nameof(pkg_module)).jl/$(pkg_version)"
+
     DEFAULT_BACKEND[] = HTTPBackend()
     return nothing
 end
